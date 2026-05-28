@@ -1,4 +1,1131 @@
-<!DOCTYPE html>
+<!DOCTYPE html><!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>VoiceRoom</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0F0F14;--bg2:#181820;--bg3:#1E1E2A;--bg4:#252533;
+  --accent:#7C6CF8;--accent2:#5B4DE0;--accent-dim:#2A2540;
+  --green:#3DD68C;--green-dim:#0D3A24;
+  --red:#F07070;--red-dim:#3A1010;
+  --amber:#F0B429;--amber-dim:#3A2A00;
+  --text:#F0EFF8;--text2:#9B9AB8;--text3:#5C5B78;
+  --border:#2A2938;--border2:#3A3950;
+  --r8:8px;--r12:12px;--r16:16px;--r24:24px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html,body{height:100%;background:#000}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;justify-content:center}
+#app{width:100%;max-width:430px;min-height:100dvh;position:relative;overflow:hidden;background:var(--bg);display:flex;flex-direction:column}
+
+/* ── SCREENS ── */
+.screen{flex:1;display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.screen.hidden{display:none}
+
+/* ── STATUS BAR ── */
+.statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0}
+.statusbar .time{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.statusbar .icons{font-size:12px;color:var(--text2);display:flex;gap:5px;align-items:center}
+
+/* ── TOP NAV ── */
+.topnav{height:56px;display:flex;align-items:center;padding:0 16px;gap:10px;flex-shrink:0;border-bottom:1px solid var(--border)}
+.nav-title{font-size:18px;font-weight:700;letter-spacing:-.5px;flex:1}
+.nav-title span{color:var(--accent)}
+.navbtn{width:40px;height:40px;border-radius:var(--r12);border:1px solid var(--border2);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:all .15s;flex-shrink:0}
+.navbtn:active{transform:scale(.92)}
+
+/* ── TABS ── */
+.tabs{display:flex;padding:12px 16px 0;gap:8px;flex-shrink:0}
+.tab{flex:1;height:36px;border-radius:var(--r24);border:1px solid var(--border);background:transparent;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px}
+.tab.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+.tab:active{transform:scale(.96)}
+
+/* ── ROOM LIST ── */
+.roomlist{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px;padding-bottom:90px}
+.roomlist::-webkit-scrollbar{display:none}
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--text3);padding:40px 0 80px}
+.empty-state .eico{font-size:44px;opacity:.4}
+.empty-state .etxt{font-size:15px;font-weight:500;color:var(--text2)}
+.empty-state .esub{font-size:13px;text-align:center;line-height:1.5;max-width:200px}
+
+.room-card{background:var(--bg3);border-radius:var(--r16);border:1px solid var(--border);padding:14px 16px;cursor:pointer;transition:all .15s;position:relative}
+.room-card:active{transform:scale(.98)}
+.room-card.mine{border-color:var(--accent)}
+.rc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.rc-name{font-size:15px;font-weight:600;letter-spacing:-.3px;max-width:200px;line-height:1.3}
+.rc-badges{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;letter-spacing:.3px}
+.badge.pub{background:#1A2E3A;color:#4DB8FF;border:1px solid #1D4060}
+.badge.priv{background:#2A1A3A;color:#C084FC;border:1px solid #4A2060}
+.badge.mine-b{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)}
+.rc-bot{display:flex;align-items:center;gap:8px}
+.rc-code{font-size:12px;color:var(--text3);font-family:monospace;letter-spacing:.5px}
+.rc-members{font-size:12px;color:var(--text2);margin-left:auto;display:flex;align-items:center;gap:4px}
+.avatars{display:flex}
+.av{width:22px;height:22px;border-radius:50%;border:2px solid var(--bg3);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;margin-left:-6px;color:#fff}
+.av:first-child{margin-left:0}
+
+/* ── FAB ── */
+.fab-wrap{position:absolute;bottom:calc(80px + var(--safe-bottom));right:16px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:10}
+.fab-hint{background:var(--amber-dim);border:1px solid var(--amber);border-radius:var(--r12);padding:7px 12px;font-size:12px;color:var(--amber);max-width:180px;text-align:right;line-height:1.4}
+.fab{height:52px;border-radius:26px;background:var(--accent);color:#fff;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;padding:0 20px;cursor:pointer;transition:all .2s;letter-spacing:-.2px}
+.fab:active{transform:scale(.96)}
+.fab.disabled{background:var(--bg4);color:var(--text3);border:1px solid var(--border)}
+
+/* ── BOTTOM BAR ── */
+.bottombar{height:calc(64px + var(--safe-bottom));background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:flex-start;padding-top:8px;flex-shrink:0}
+.btab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0}
+.btab .bico{font-size:22px;color:var(--text3);transition:color .2s}
+.btab .blbl{font-size:10px;color:var(--text3);font-weight:500;transition:color .2s}
+.btab.active .bico,.btab.active .blbl{color:var(--accent)}
+
+/* ── ROOM SCREEN ── */
+.room-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;flex-shrink:0}
+.rh-row1{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.room-title-txt{font-size:16px;font-weight:700;letter-spacing:-.4px;flex:1}
+.rh-row2{display:flex;gap:8px;align-items:center}
+.code-chip{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r8);padding:4px 10px;font-size:12px;font-family:monospace;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px}
+.code-chip:active{background:var(--bg4)}
+.del-btn{width:36px;height:36px;border-radius:var(--r12);background:var(--red-dim);border:1px solid var(--red);color:var(--red);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px}
+
+/* ── ROOM TABS ── */
+.room-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.rtab{flex:1;height:44px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.rtab.active{color:var(--accent);border-color:var(--accent)}
+
+/* ── MEMBERS ── */
+.members-area{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.members-area::-webkit-scrollbar{display:none}
+.sec-lbl{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px}
+.members-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.mem-tile{background:var(--bg3);border-radius:var(--r16);border:1px solid var(--border);padding:14px 8px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;position:relative}
+.mem-tile.speaking{border-color:var(--green);background:var(--green-dim)}
+.mem-avatar{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;position:relative}
+.pulse{position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--green);animation:pulse 1.5s infinite;opacity:0}
+.mem-tile.speaking .pulse{opacity:1}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.1);opacity:.2}}
+.mem-name{font-size:12px;font-weight:500;text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mic-off{position:absolute;bottom:8px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--red-dim);border:1.5px solid var(--red);font-size:9px;display:flex;align-items:center;justify-content:center}
+
+/* ── CONTROLS ── */
+.room-controls{background:var(--bg2);border-top:1px solid var(--border);padding:14px 16px calc(14px + var(--safe-bottom));flex-shrink:0}
+.ctrl-row{display:flex;gap:10px;margin-bottom:10px}
+.ctrl-btn{flex:1;height:50px;border-radius:var(--r16);border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:12px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;transition:all .15s}
+.ctrl-btn:active{transform:scale(.94)}
+.ctrl-btn.on{background:var(--green-dim);border-color:var(--green);color:var(--green)}
+.ctrl-btn .ci{font-size:20px}
+.leave-btn{width:100%;height:46px;border-radius:var(--r16);background:var(--red-dim);border:1px solid var(--red);color:var(--red);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
+.leave-btn:active{transform:scale(.97)}
+
+/* ── MUSIC PANEL ── */
+.music-panel{flex:1;overflow-y:auto;display:flex;flex-direction:column;padding-bottom:10px}
+.music-panel::-webkit-scrollbar{display:none}
+
+.player-section{padding:14px 16px;border-bottom:1px solid var(--border)}
+.player-card{background:var(--bg3);border-radius:var(--r16);border:1px solid var(--border);overflow:hidden}
+.track-cover{width:100%;height:140px;background:var(--bg4);display:flex;align-items:center;justify-content:center;position:relative}
+.cover-emoji{font-size:56px;opacity:.8}
+.cover-overlay{position:absolute;bottom:0;left:0;right:0;padding:10px 14px;background:rgba(0,0,0,.7)}
+.track-name{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-artist{font-size:12px;color:var(--text2);margin-top:2px}
+.player-body{padding:12px 14px}
+.prog-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.prog-bar{flex:1;height:4px;background:var(--bg4);border-radius:2px;cursor:pointer;position:relative}
+.prog-fill{height:100%;background:var(--accent);border-radius:2px}
+.prog-thumb{position:absolute;top:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:var(--accent)}
+.tlbl{font-size:11px;color:var(--text3);font-family:monospace;min-width:32px}
+.tlbl.r{text-align:right}
+.main-ctrls{display:flex;align-items:center;justify-content:center;gap:14px}
+.mc{width:44px;height:44px;border-radius:50%;border:1px solid var(--border2);background:var(--bg4);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:all .15s;flex-shrink:0}
+.mc:active{transform:scale(.88)}
+.mc.play-btn{width:52px;height:52px;background:var(--accent);border-color:var(--accent);font-size:22px}
+.mc.play-btn:active{background:var(--accent2)}
+.mc.active-btn{color:var(--accent)}
+.vol-row{display:flex;align-items:center;gap:8px;margin-top:12px}
+.vol-slider{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--bg4);outline:none;cursor:pointer}
+.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer}
+
+/* ── SYNC BAR ── */
+.sync-bar{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--bg4);border-top:1px solid var(--border)}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;transition:background .3s}
+.sdot.syncing{background:var(--amber);animation:blink .7s infinite}
+.sdot.off{background:var(--text3)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.stxt{font-size:12px;color:var(--text2);flex:1}
+
+/* ── LISTENER MUSIC ── */
+.listener-banner{margin:14px 16px 0;border-radius:var(--r16);border:1px solid var(--accent);background:var(--accent-dim);padding:12px 16px;display:flex;align-items:center;gap:12px}
+.lb-icon{font-size:26px;flex-shrink:0}
+.lb-title{font-size:14px;font-weight:700}
+.lb-sub{font-size:12px;color:var(--text2);margin-top:2px;line-height:1.4}
+.lp-card{margin:12px 16px 0;background:var(--bg3);border-radius:var(--r16);border:1px solid var(--border);overflow:hidden}
+.lp-cover{height:100px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:44px;position:relative}
+.eq{display:flex;gap:2px;align-items:flex-end;height:18px;position:absolute;bottom:8px;right:12px}
+.eq-bar{width:4px;border-radius:2px;background:var(--green);animation:eq .6s ease infinite alternate}
+.eq-bar:nth-child(2){animation-delay:.1s}
+.eq-bar:nth-child(3){animation-delay:.2s}
+.eq-bar:nth-child(4){animation-delay:.05s}
+.eq-bar:nth-child(5){animation-delay:.15s}
+@keyframes eq{0%{height:20%}100%{height:100%}}
+.lp-body{padding:12px 14px}
+.lp-track{font-size:14px;font-weight:700}
+.lp-artist{font-size:12px;color:var(--text2);margin-top:2px}
+.lp-prog{height:3px;background:var(--bg4);border-radius:2px;margin:10px 0 6px}
+.lp-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s linear}
+.lp-times{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);font-family:monospace;margin-bottom:10px}
+
+/* ── QUEUE ── */
+.queue-section{padding:14px 16px;flex:1}
+.qi{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.qi:last-child{border-bottom:none}
+.qi-num{width:20px;font-size:12px;color:var(--text3);text-align:center;flex-shrink:0}
+.qi-num.now{color:var(--accent)}
+.qi-ico{width:40px;height:40px;border-radius:var(--r8);background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.qi-info{flex:1;min-width:0}
+.qi-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qi-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.qi-dur{font-size:12px;color:var(--text3);font-family:monospace;flex-shrink:0}
+.qi-del{width:30px;height:30px;border-radius:var(--r8);background:transparent;border:1px solid var(--border);color:var(--text3);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;flex-shrink:0}
+.qi-del:active{background:var(--red-dim);border-color:var(--red);color:var(--red)}
+
+/* ── URL INPUT ── */
+.url-section{padding:14px 16px;border-top:1px solid var(--border)}
+.url-row{display:flex;gap:8px;margin-top:8px}
+.url-inp{flex:1;height:42px;border-radius:var(--r12);border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:13px;padding:0 12px;outline:none;font-family:inherit;transition:border .2s}
+.url-inp:focus{border-color:var(--accent)}
+.url-inp::placeholder{color:var(--text3)}
+.url-add-btn{height:42px;padding:0 14px;border-radius:var(--r12);background:var(--accent);border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;flex-shrink:0}
+.url-add-btn:active{background:var(--accent2)}
+
+/* ── SHEETS / MODALS ── */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:flex-end;backdrop-filter:blur(4px);transition:opacity .25s}
+.overlay.hidden{opacity:0;pointer-events:none}
+.sheet{background:var(--bg2);border-radius:var(--r24) var(--r24) 0 0;padding:18px 20px calc(32px + var(--safe-bottom));width:100%;transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.overlay.hidden .sheet{transform:translateY(100%)}
+.sh-handle{width:36px;height:4px;border-radius:2px;background:var(--border2);margin:0 auto 18px}
+.sh-title{font-size:17px;font-weight:700;margin-bottom:18px;letter-spacing:-.4px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.6px;margin-bottom:6px;text-transform:uppercase}
+.field input{width:100%;height:48px;border-radius:var(--r12);border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:15px;padding:0 14px;outline:none;font-family:inherit;transition:border .2s}
+.field input:focus{border-color:var(--accent)}
+.type-row{display:flex;gap:10px}
+.type-opt{flex:1;height:54px;border-radius:var(--r12);border:1px solid var(--border2);background:var(--bg3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:all .2s}
+.type-opt.sel{border-color:var(--accent);background:var(--accent-dim)}
+.type-opt .to-ico{font-size:20px}
+.type-opt .to-lbl{font-size:12px;font-weight:600;color:var(--text2)}
+.type-opt.sel .to-lbl{color:var(--accent)}
+.sh-btns{display:flex;gap:10px;margin-top:18px}
+.sbtn{flex:1;height:48px;border-radius:var(--r16);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);transition:all .15s}
+.sbtn:active{transform:scale(.97)}
+.sbtn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sbtn.danger{background:var(--red-dim);border-color:var(--red);color:var(--red)}
+
+/* ── PIN ── */
+.pin-row{display:flex;gap:10px;justify-content:center;margin:16px 0}
+.pin-box{width:56px;height:62px;border-radius:var(--r12);border:1.5px solid var(--border2);background:var(--bg3);font-size:24px;font-weight:700;text-align:center;color:var(--text);outline:none;font-family:inherit;transition:border .2s}
+.pin-box:focus{border-color:var(--accent)}
+
+/* ── TOAST ── */
+.toast{position:absolute;top:54px;left:50%;transform:translateX(-50%) translateY(-70px);background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r12);padding:9px 16px;font-size:13px;font-weight:500;white-space:nowrap;z-index:99;transition:transform .3s,opacity .3s;opacity:0;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.ok{border-color:var(--green);color:var(--green);background:var(--green-dim)}
+.toast.err{border-color:var(--red);color:var(--red);background:var(--red-dim)}
+.toast.warn{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
+
+/* ── WS STATUS ── */
+.ws-chip{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border)}
+.ws-chip.connected{border-color:var(--green);color:var(--green)}
+.ws-chip.disconnected{border-color:var(--red);color:var(--red)}
+.ws-chip.connecting{border-color:var(--amber);color:var(--amber)}
+.wsdot{width:6px;height:6px;border-radius:50%;background:currentColor}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="toast" id="toast"></div>
+
+  <!-- ═══════════════════════════════════════════
+       LOBBY SCREEN
+  ════════════════════════════════════════════ -->
+  <div class="screen" id="lobbyScreen">
+    <div class="statusbar">
+      <span class="time" id="clock">09:41</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="ws-chip connecting" id="wsChip">
+          <div class="wsdot"></div><span id="wsLabel">Menghubungkan...</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="topnav">
+      <span class="nav-title">Voice<span>Room</span></span>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this,'all')">🏠 Semua</div>
+      <div class="tab" onclick="switchTab(this,'pub')">🌐 Publik</div>
+      <div class="tab" onclick="switchTab(this,'priv')">🔒 Privat</div>
+    </div>
+
+    <div class="roomlist" id="roomList">
+      <div class="empty-state">
+        <div class="eico">🎙</div>
+        <div class="etxt">Belum ada ruang</div>
+        <div class="esub">Buat ruang pertama dan ajak teman!</div>
+      </div>
+    </div>
+
+    <div class="fab-wrap">
+      <div class="fab-hint" id="fabHint" style="display:none">Kamu sudah punya ruangan aktif</div>
+      <div class="fab" id="fabBtn" onclick="onFabClick()">+ Buat Ruang</div>
+    </div>
+
+    <div class="bottombar">
+      <div class="btab active"><div class="bico">🏠</div><div class="blbl">Lobby</div></div>
+      <div class="btab" onclick="goMyRoom()"><div class="bico">🎙</div><div class="blbl">Ruanganku</div></div>
+      <div class="btab" onclick="showNameSheet()"><div class="bico">👤</div><div class="blbl">Profil</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       ROOM SCREEN
+  ════════════════════════════════════════════ -->
+  <div class="screen hidden" id="roomScreen">
+    <div class="statusbar">
+      <span class="time" id="clock2">09:41</span>
+      <div class="ws-chip connected" id="wsChip2"><div class="wsdot"></div><span id="onlineCount">0 online</span></div>
+    </div>
+
+    <div class="room-header">
+      <div class="rh-row1">
+        <div class="navbtn" onclick="leaveRoom()">←</div>
+        <div class="room-title-txt" id="roomTitleTxt">Ruangan</div>
+        <div class="del-btn" id="delRoomBtn" style="display:none" onclick="confirmDelete()">🗑</div>
+      </div>
+      <div class="rh-row2">
+        <div class="badge pub" id="roomTypeBadge">PUBLIK</div>
+        <div class="code-chip" onclick="copyCode()">📋 <span id="roomCodeTxt">------</span></div>
+      </div>
+    </div>
+
+    <div class="room-tabs">
+      <div class="rtab active" id="rtab-members" onclick="switchRoomTab('members')">👥 Anggota</div>
+      <div class="rtab" id="rtab-music" onclick="switchRoomTab('music')">🎵 Musik</div>
+    </div>
+
+    <!-- MEMBERS TAB -->
+    <div id="tab-members" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="members-area">
+        <div class="sec-lbl">Anggota</div>
+        <div class="members-grid" id="membersGrid"></div>
+      </div>
+      <div class="room-controls">
+        <div class="ctrl-row">
+          <div class="ctrl-btn on" id="micBtn" onclick="toggleMic()">
+            <span class="ci">🎙</span><span>Mikrofon</span>
+          </div>
+          <div class="ctrl-btn on" id="volBtn" onclick="toggleVol()">
+            <span class="ci">🔊</span><span>Speaker</span>
+          </div>
+          <div class="ctrl-btn" onclick="switchRoomTab('music')">
+            <span class="ci">🎵</span><span>Musik</span>
+          </div>
+        </div>
+        <div class="leave-btn" onclick="leaveRoom()">⏏ Keluar Ruang</div>
+      </div>
+    </div>
+
+    <!-- MUSIC TAB -->
+    <div id="tab-music" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+
+      <!-- OWNER MUSIC CONTROLS -->
+      <div id="musicOwner" class="music-panel" style="display:none">
+        <div class="player-section">
+          <div class="player-card">
+            <div class="track-cover">
+              <span class="cover-emoji" id="coverEmoji">🎵</span>
+              <div class="cover-overlay">
+                <div class="track-name" id="ownerTrackName">Pilih lagu dari antrian</div>
+                <div class="track-artist" id="ownerArtist">—</div>
+              </div>
+            </div>
+            <div class="player-body">
+              <div class="prog-row">
+                <span class="tlbl" id="curTime">0:00</span>
+                <div class="prog-bar" id="progBar" onclick="ownerSeek(event)">
+                  <div class="prog-fill" id="progFill" style="width:0%"></div>
+                  <div class="prog-thumb" id="progThumb" style="left:0%"></div>
+                </div>
+                <span class="tlbl r" id="durTime">0:00</span>
+              </div>
+              <div class="main-ctrls">
+                <div class="mc" onclick="prevTrack()">⏮</div>
+                <div class="mc" onclick="shuffleTrack()">🔀</div>
+                <div class="mc play-btn" id="playBtn" onclick="togglePlay()">▶</div>
+                <div class="mc" id="repeatBtn" onclick="toggleRepeat()">🔁</div>
+                <div class="mc" onclick="nextTrack()">⏭</div>
+              </div>
+              <div class="vol-row">
+                <span style="font-size:14px;color:var(--text3)">🔈</span>
+                <input type="range" class="vol-slider" min="0" max="100" value="70" step="1" id="ownerVol" oninput="updateVol(this.value,'ownerVolVal')">
+                <span style="font-size:12px;color:var(--text3);min-width:30px;text-align:right" id="ownerVolVal">70%</span>
+              </div>
+            </div>
+            <div class="sync-bar">
+              <div class="sdot" id="syncDot"></div>
+              <span class="stxt" id="syncTxt">Tersinkron ke semua anggota</span>
+              <span style="font-size:12px;color:var(--text3)" id="listenerCount">👂 0</span>
+            </div>
+          </div>
+        </div>
+        <div class="url-section">
+          <div class="sec-lbl">Tambah via URL</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">YouTube / SoundCloud / link .mp3</div>
+          <div class="url-row">
+            <input class="url-inp" type="url" id="urlInp" placeholder="https://youtube.com/watch?v=...">
+            <button class="url-add-btn" onclick="addUrlTrack()">+ Tambah</button>
+          </div>
+        </div>
+        <div class="queue-section">
+          <div class="sec-lbl">Antrian</div>
+          <div id="ownerQueue"></div>
+        </div>
+      </div>
+
+      <!-- LISTENER MUSIC VIEW -->
+      <div id="musicListener" class="music-panel" style="display:none">
+        <div class="listener-banner">
+          <span class="lb-icon">🎧</span>
+          <div>
+            <div class="lb-title">Mode Pendengar</div>
+            <div class="lb-sub">Musik dikontrol pemilik. Volume bisa kamu atur sendiri.</div>
+          </div>
+        </div>
+        <div class="lp-card">
+          <div class="lp-cover">
+            <span id="lpEmoji">🎵</span>
+            <div class="eq" id="lpEq" style="display:none">
+              <div class="eq-bar" style="height:30%"></div>
+              <div class="eq-bar" style="height:60%"></div>
+              <div class="eq-bar" style="height:80%"></div>
+              <div class="eq-bar" style="height:50%"></div>
+              <div class="eq-bar" style="height:40%"></div>
+            </div>
+          </div>
+          <div class="lp-body">
+            <div class="lp-track" id="lpTrack">Menunggu pemilik memutar musik...</div>
+            <div class="lp-artist" id="lpArtist2">—</div>
+            <div class="lp-prog"><div class="lp-fill" id="lpFill" style="width:0%"></div></div>
+            <div class="lp-times"><span id="lpCur">0:00</span><span id="lpDur">0:00</span></div>
+            <div class="vol-row">
+              <span style="font-size:14px;color:var(--text3)">🔊</span>
+              <input type="range" class="vol-slider" min="0" max="100" value="80" step="1" id="lpVol" oninput="updateVol(this.value,'lpVolVal')">
+              <span style="font-size:12px;color:var(--text3);min-width:30px;text-align:right" id="lpVolVal">80%</span>
+            </div>
+          </div>
+        </div>
+        <div class="queue-section">
+          <div class="sec-lbl">Antrian</div>
+          <div id="listenerQueue"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════
+       SHEETS
+  ═══════════════════════════════ -->
+
+  <!-- NAME SHEET -->
+  <div class="overlay hidden" id="nameOverlay" onclick="bgClose(event,'nameOverlay')">
+    <div class="sheet">
+      <div class="sh-handle"></div>
+      <div class="sh-title">Nama Kamu</div>
+      <div class="field">
+        <label>Nama Tampilan</label>
+        <input type="text" id="nameInp" placeholder="mis. Budi, Sari..." maxlength="20">
+      </div>
+      <div class="sh-btns">
+        <div class="sbtn" onclick="closeSheet('nameOverlay')">Batal</div>
+        <div class="sbtn primary" onclick="saveName()">Simpan</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE ROOM SHEET -->
+  <div class="overlay hidden" id="createOverlay" onclick="bgClose(event,'createOverlay')">
+    <div class="sheet">
+      <div class="sh-handle"></div>
+      <div class="sh-title">Buat Ruang Baru</div>
+      <div class="field">
+        <label>Nama Ruang</label>
+        <input type="text" id="newRoomName" placeholder="mis. Obrolan Sore..." maxlength="30">
+      </div>
+      <div class="field">
+        <label>Tipe</label>
+        <div class="type-row">
+          <div class="type-opt sel" id="tpPub" onclick="selType('public')">
+            <span class="to-ico">🌐</span><span class="to-lbl">Publik</span>
+          </div>
+          <div class="type-opt" id="tpPriv" onclick="selType('private')">
+            <span class="to-ico">🔒</span><span class="to-lbl">Privat</span>
+          </div>
+        </div>
+      </div>
+      <div class="field" id="pinField" style="display:none">
+        <label>PIN (4 digit)</label>
+        <input type="number" id="newRoomPin" placeholder="0000" min="0" max="9999">
+      </div>
+      <div class="sh-btns">
+        <div class="sbtn" onclick="closeSheet('createOverlay')">Batal</div>
+        <div class="sbtn primary" onclick="doCreateRoom()">Buat Ruang</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIN ENTRY SHEET -->
+  <div class="overlay hidden" id="pinOverlay" onclick="bgClose(event,'pinOverlay')">
+    <div class="sheet">
+      <div class="sh-handle"></div>
+      <div class="sh-title">Ruang Privat 🔒</div>
+      <p style="font-size:13px;color:var(--text2)">Masukkan PIN 4 digit untuk bergabung</p>
+      <div class="pin-row">
+        <input class="pin-box" type="number" id="p1" oninput="pNext(this,'p2')" onkeydown="pBack(event,this,null)">
+        <input class="pin-box" type="number" id="p2" oninput="pNext(this,'p3')" onkeydown="pBack(event,this,'p1')">
+        <input class="pin-box" type="number" id="p3" oninput="pNext(this,'p4')" onkeydown="pBack(event,this,'p2')">
+        <input class="pin-box" type="number" id="p4" oninput="pNext(this,null)" onkeydown="pBack(event,this,'p3')">
+      </div>
+      <div class="sh-btns">
+        <div class="sbtn" onclick="closeSheet('pinOverlay');pendingJoinRoomId=null">Batal</div>
+        <div class="sbtn primary" onclick="submitPin()">Masuk</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRM DELETE SHEET -->
+  <div class="overlay hidden" id="delOverlay" onclick="bgClose(event,'delOverlay')">
+    <div class="sheet">
+      <div class="sh-handle"></div>
+      <div class="sh-title" style="color:var(--red)">Hapus Ruangan?</div>
+      <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:4px">Semua anggota akan dikeluarkan dan ruangan dihapus permanen.</p>
+      <div class="sh-btns">
+        <div class="sbtn" onclick="closeSheet('delOverlay')">Batal</div>
+        <div class="sbtn danger" onclick="doDeleteRoom()">Ya, Hapus</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────
+// Ganti WS_URL dengan URL Railway kamu, mis:
+// wss://your-app.up.railway.app
+const WS_URL = (() => {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${proto}://${location.host}`;
+})();
+
+// ─── STATE ─────────────────────────────────────────────────────────
+let ws = null;
+let wsReady = false;
+let myName = localStorage.getItem('vr_name') || 'Pengguna';
+let myWsId = null;
+let currentRoom = null;   // full room object from server
+let allRooms = [];         // room list from server
+let activeTab = 'all';
+let activeRoomTab = 'members';
+let micOn = true, volOn = true;
+let repeatOn = false;
+
+// Music state (synced from server)
+let music = {
+  queue: [], currentIdx: -1,
+  isPlaying: false, elapsed: 0,
+  serverStartTime: null, startElapsed: 0,
+};
+let musicTimer = null;
+let pendingJoinRoomId = null;
+
+// Avatar colors pool
+const AVCOLS = ['#7C6CF8','#3DD68C','#F07070','#F0B429','#4DB8FF','#C084FC','#FF8A65','#26C6DA'];
+const memberColors = new Map();
+function getColor(id) {
+  if (!memberColors.has(id)) {
+    memberColors.set(id, AVCOLS[memberColors.size % AVCOLS.length]);
+  }
+  return memberColors.get(id);
+}
+
+// ─── CLOCK ─────────────────────────────────────────────────────────
+function tick() {
+  const n = new Date();
+  const s = n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');
+  document.getElementById('clock').textContent = s;
+  document.getElementById('clock2').textContent = s;
+}
+tick(); setInterval(tick, 1000);
+
+// ─── TOAST ─────────────────────────────────────────────────────────
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast ' + type;
+  void el.offsetWidth; el.classList.add('show');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ─── WS CONNECTION ─────────────────────────────────────────────────
+function connectWS() {
+  setWsStatus('connecting');
+  try { ws = new WebSocket(WS_URL); } catch(e) { setWsStatus('disconnected'); return; }
+
+  ws.onopen = () => {
+    wsReady = true;
+    setWsStatus('connected');
+    send({ type: 'GET_ROOM_LIST' });
+  };
+
+  ws.onclose = () => {
+    wsReady = false;
+    setWsStatus('disconnected');
+    setTimeout(connectWS, 3000);
+  };
+
+  ws.onerror = () => { ws.close(); };
+
+  ws.onmessage = (e) => {
+    try { handleMsg(JSON.parse(e.data)); } catch {}
+  };
+}
+
+function send(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+}
+
+function setWsStatus(s) {
+  ['wsChip','wsChip2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'ws-chip ' + s;
+  });
+  const lbl = document.getElementById('wsLabel');
+  if (lbl) lbl.textContent = s === 'connected' ? 'Terhubung' : s === 'connecting' ? 'Menghubungkan...' : 'Terputus';
+}
+
+// ─── MESSAGE HANDLER ───────────────────────────────────────────────
+function handleMsg(msg) {
+  switch(msg.type) {
+
+    case 'ROOM_LIST':
+      allRooms = msg.rooms || [];
+      renderLobby();
+      break;
+
+    case 'ROOM_CREATED':
+    case 'ROOM_JOINED':
+      currentRoom = msg.room;
+      myWsId = msg.room.meta.ownerWsId; // server echoes for CREATED; for JOIN use member id
+      if (msg.type === 'ROOM_JOINED') myWsId = null; // will be set from member list
+      // Find my member id
+      if (msg.room.members) {
+        const me = msg.room.members.find(m => m.name === myName);
+        if (me) myWsId = me.id;
+      }
+      syncMusicState(msg.room.music);
+      enterRoomUI(msg.room);
+      if (msg.type === 'ROOM_CREATED') toast('Ruangan berhasil dibuat! 🎉','ok');
+      else toast('Bergabung ke ruangan 🎉','ok');
+      break;
+
+    case 'MEMBER_JOINED':
+      if (currentRoom) {
+        currentRoom.members = [...(currentRoom.members||[]), msg.member];
+        renderMembers();
+        toast(msg.member.name + ' bergabung');
+      }
+      break;
+
+    case 'MEMBER_LEFT':
+      if (currentRoom) {
+        currentRoom.members = (currentRoom.members||[]).filter(m => m.id !== msg.memberId);
+        renderMembers();
+      }
+      break;
+
+    case 'MEMBER_UPDATE':
+      if (currentRoom) {
+        currentRoom.members = (currentRoom.members||[]).map(m =>
+          m.id === msg.member.id ? {...m, ...msg.member} : m
+        );
+        renderMembers();
+      }
+      break;
+
+    case 'ROOM_DELETED':
+      if (currentRoom && currentRoom.meta.id === msg.roomId) {
+        currentRoom = null;
+        stopMusicTimer();
+        showScreen('lobbyScreen');
+        toast(msg.reason || 'Ruangan dihapus oleh pemilik','warn');
+      }
+      send({ type: 'GET_ROOM_LIST' });
+      break;
+
+    case 'MUSIC_STATE':
+      syncMusicState(msg.music);
+      break;
+
+    case 'MUSIC_QUEUE':
+      music.queue = msg.queue || [];
+      if (msg.currentIdx !== undefined) music.currentIdx = msg.currentIdx;
+      renderQueue();
+      break;
+
+    case 'ERROR':
+      toast(msg.message || 'Terjadi kesalahan','err');
+      break;
+  }
+}
+
+// ─── SYNC MUSIC ────────────────────────────────────────────────────
+function syncMusicState(m) {
+  if (!m) return;
+  music = { ...music, ...m };
+  if (music.isPlaying && music.serverStartTime) {
+    const drift = Math.floor((Date.now() - music.serverStartTime) / 1000);
+    music.elapsed = (music.startElapsed || 0) + drift;
+  }
+  startMusicTimer();
+  renderMusicUI();
+}
+
+function startMusicTimer() {
+  stopMusicTimer();
+  if (!music.isPlaying) return;
+  musicTimer = setInterval(() => {
+    music.elapsed++;
+    const track = music.queue[music.currentIdx];
+    if (track && music.elapsed >= track.durSec) {
+      if (isOwner()) {
+        if (repeatOn) { music.elapsed = 0; send({ type: 'MUSIC_SEEK', elapsed: 0 }); }
+        else { nextTrack(); }
+      } else {
+        music.elapsed = track.durSec;
+        stopMusicTimer();
+      }
+    }
+    renderMusicProgress();
+  }, 1000);
+}
+
+function stopMusicTimer() {
+  clearInterval(musicTimer); musicTimer = null;
+}
+
+function isOwner() {
+  return currentRoom && currentRoom.meta.ownerWsId === myWsId;
+}
+
+// ─── MUSIC UI ──────────────────────────────────────────────────────
+function fmt(s) {
+  s = Math.max(0, Math.floor(s));
+  return Math.floor(s/60) + ':' + (s%60 < 10 ? '0' : '') + (s%60);
+}
+
+function renderMusicUI() {
+  const track = music.queue[music.currentIdx];
+  const pct = track ? Math.round(music.elapsed / track.durSec * 100) : 0;
+
+  // Owner UI
+  document.getElementById('coverEmoji').textContent = track ? track.emoji : '🎵';
+  document.getElementById('ownerTrackName').textContent = track ? track.title : 'Pilih lagu dari antrian';
+  document.getElementById('ownerArtist').textContent = track ? track.artist : '—';
+  document.getElementById('playBtn').textContent = music.isPlaying ? '⏸' : '▶';
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progThumb').style.left = pct + '%';
+  document.getElementById('curTime').textContent = fmt(music.elapsed);
+  document.getElementById('durTime').textContent = track ? fmt(track.durSec) : '0:00';
+
+  // Listener UI
+  document.getElementById('lpEmoji').textContent = track ? track.emoji : '🎵';
+  document.getElementById('lpTrack').textContent = track
+    ? (music.isPlaying ? track.title : 'Dijeda...')
+    : 'Menunggu pemilik...';
+  document.getElementById('lpArtist2').textContent = track ? track.artist : '—';
+  document.getElementById('lpFill').style.width = pct + '%';
+  document.getElementById('lpCur').textContent = fmt(music.elapsed);
+  document.getElementById('lpDur').textContent = track ? fmt(track.durSec) : '0:00';
+  document.getElementById('lpEq').style.display = music.isPlaying ? 'flex' : 'none';
+
+  renderQueue();
+  updateSyncIndicator();
+}
+
+function renderMusicProgress() {
+  const track = music.queue[music.currentIdx];
+  if (!track) return;
+  const pct = Math.round(music.elapsed / track.durSec * 100);
+  document.getElementById('progFill').style.width = pct + '%';
+  document.getElementById('progThumb').style.left = pct + '%';
+  document.getElementById('curTime').textContent = fmt(music.elapsed);
+  document.getElementById('lpFill').style.width = pct + '%';
+  document.getElementById('lpCur').textContent = fmt(music.elapsed);
+}
+
+function renderQueue() {
+  const owner = isOwner();
+  const html = music.queue.map((t, i) => `
+    <div class="qi" onclick="${owner ? 'playIdx('+i+')' : ''}">
+      <div class="qi-num${i===music.currentIdx?' now':''}">${i===music.currentIdx&&music.isPlaying?'♪':(i+1)}</div>
+      <div class="qi-ico">${t.emoji}</div>
+      <div class="qi-info">
+        <div class="qi-title">${t.title}</div>
+        <div class="qi-sub">${t.artist}</div>
+      </div>
+      <div class="qi-dur">${fmt(t.durSec)}</div>
+      ${owner ? `<div class="qi-del" onclick="event.stopPropagation();removeTrack(${i})">✕</div>` : ''}
+    </div>`).join('') || '<div style="font-size:13px;color:var(--text3);padding:12px 0">Antrian kosong</div>';
+  document.getElementById('ownerQueue').innerHTML = html;
+  document.getElementById('listenerQueue').innerHTML = html.replace(/onclick="[^"]*"/g,'').replace(/qi-del/g,'qi-del" style="display:none');
+}
+
+function updateSyncIndicator() {
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncTxt');
+  const members = currentRoom?.members?.length || 0;
+  document.getElementById('listenerCount').textContent = '👂 ' + (members - 1);
+  dot.className = 'sdot';
+  txt.textContent = music.isPlaying ? 'Tersinkron ke semua anggota' : 'Dijeda';
+}
+
+function flashSync() {
+  const dot = document.getElementById('syncDot');
+  dot.className = 'sdot syncing';
+  setTimeout(() => dot.className = 'sdot', 500);
+}
+
+// ─── MUSIC CONTROLS (owner) ────────────────────────────────────────
+function togglePlay() {
+  if (!isOwner()) return;
+  if (music.queue.length === 0) { toast('Antrian kosong, tambahkan lagu dulu','err'); return; }
+  if (music.currentIdx < 0) { music.currentIdx = 0; music.elapsed = 0; }
+  if (music.isPlaying) {
+    music.isPlaying = false;
+    stopMusicTimer();
+    send({ type: 'MUSIC_PAUSE' });
+  } else {
+    music.isPlaying = true;
+    send({ type: 'MUSIC_PLAY' });
+    startMusicTimer();
+  }
+  renderMusicUI();
+  flashSync();
+}
+
+function playIdx(idx) {
+  if (!isOwner()) return;
+  music.currentIdx = idx; music.elapsed = 0; music.isPlaying = true;
+  send({ type: 'MUSIC_TRACK', currentIdx: idx });
+  startMusicTimer();
+  renderMusicUI(); flashSync();
+}
+
+function nextTrack() {
+  if (!isOwner()) return;
+  if (music.queue.length === 0) return;
+  const idx = (music.currentIdx + 1) % music.queue.length;
+  playIdx(idx);
+}
+
+function prevTrack() {
+  if (!isOwner()) return;
+  if (music.elapsed > 3) { ownerSeekTo(0); return; }
+  const idx = (music.currentIdx - 1 + music.queue.length) % music.queue.length;
+  playIdx(idx);
+}
+
+function shuffleTrack() {
+  if (!isOwner() || music.queue.length === 0) return;
+  const idx = Math.floor(Math.random() * music.queue.length);
+  playIdx(idx); toast('🔀 Memutar acak');
+}
+
+function toggleRepeat() {
+  if (!isOwner()) return;
+  repeatOn = !repeatOn;
+  document.getElementById('repeatBtn').classList.toggle('active-btn', repeatOn);
+  toast(repeatOn ? '🔁 Ulangi aktif' : '🔁 Ulangi nonaktif');
+}
+
+function ownerSeek(e) {
+  if (!isOwner()) return;
+  const bar = document.getElementById('progBar');
+  const rect = bar.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const track = music.queue[music.currentIdx];
+  if (!track) return;
+  const elapsed = Math.round(pct * track.durSec);
+  music.elapsed = elapsed;
+  send({ type: 'MUSIC_SEEK', elapsed });
+  renderMusicUI(); flashSync();
+}
+
+function ownerSeekTo(elapsed) {
+  music.elapsed = elapsed;
+  send({ type: 'MUSIC_SEEK', elapsed });
+  renderMusicUI(); flashSync();
+}
+
+function removeTrack(idx) {
+  if (!isOwner()) return;
+  send({ type: 'MUSIC_QUEUE_REMOVE', index: idx });
+  music.queue.splice(idx, 1);
+  if (music.currentIdx >= music.queue.length) music.currentIdx = music.queue.length - 1;
+  renderQueue();
+}
+
+function addUrlTrack() {
+  if (!isOwner()) { toast('Hanya pemilik yang bisa menambah lagu','err'); return; }
+  const url = document.getElementById('urlInp').value.trim();
+  if (!url) { toast('Masukkan URL terlebih dahulu','err'); return; }
+  const isYT = url.includes('youtube.com') || url.includes('youtu.be');
+  const isSC = url.includes('soundcloud.com');
+  const isMp3 = url.match(/\.mp3(\?|$)/i);
+  if (!url.startsWith('http')) { toast('URL tidak valid','err'); return; }
+  const title = isYT ? 'Video YouTube' : isSC ? 'Track SoundCloud' : decodeURIComponent(url.split('/').pop().replace(/\.mp3.*/i,'')) || 'Audio';
+  const track = {
+    id: Date.now(),
+    title, url,
+    artist: isYT ? 'YouTube' : isSC ? 'SoundCloud' : 'Audio',
+    emoji: isYT ? '📺' : isSC ? '☁️' : '🎵',
+    durSec: 180,
+  };
+  send({ type: 'MUSIC_QUEUE_ADD', track });
+  music.queue.push(track);
+  document.getElementById('urlInp').value = '';
+  renderQueue();
+  toast('✅ Ditambahkan ke antrian','ok');
+}
+
+function updateVol(v, outId) {
+  document.getElementById(outId).textContent = v + '%';
+}
+
+// ─── ROOM UI ───────────────────────────────────────────────────────
+function enterRoomUI(room) {
+  currentRoom = room;
+  document.getElementById('roomTitleTxt').textContent = room.meta.name;
+  document.getElementById('roomCodeTxt').textContent = room.meta.code;
+  document.getElementById('roomTypeBadge').textContent = room.meta.type === 'public' ? 'PUBLIK' : 'PRIVAT';
+  document.getElementById('roomTypeBadge').className = 'badge ' + (room.meta.type === 'public' ? 'pub' : 'priv');
+  document.getElementById('delRoomBtn').style.display = isOwner() ? 'flex' : 'none';
+
+  // Show correct music panel
+  document.getElementById('musicOwner').style.display = isOwner() ? 'flex' : 'none';
+  document.getElementById('musicListener').style.display = !isOwner() ? 'flex' : 'none';
+
+  renderMembers();
+  renderMusicUI();
+  showScreen('roomScreen');
+  switchRoomTab('members');
+}
+
+function renderMembers() {
+  if (!currentRoom) return;
+  const members = currentRoom.members || [];
+  document.getElementById('onlineCount').textContent = members.length + ' online';
+  document.getElementById('membersGrid').innerHTML = members.map(m => {
+    const col = getColor(m.id);
+    const isMe = m.id === myWsId;
+    return `<div class="mem-tile">
+      <div class="mem-avatar" style="background:${col}22">
+        <span style="font-size:18px;font-weight:700;color:${col}">${m.name[0]}</span>
+        <div class="pulse"></div>
+      </div>
+      <div class="mem-name">${m.name}${isMe?' (Kamu)':''}</div>
+      ${isMe&&!micOn?'<div class="mic-off">🔇</div>':''}
+    </div>`;
+  }).join('');
+}
+
+function switchRoomTab(tab) {
+  activeRoomTab = tab;
+  document.getElementById('tab-members').style.display = tab==='members' ? 'flex' : 'none';
+  document.getElementById('tab-music').style.display = tab==='music' ? 'flex' : 'none';
+  document.getElementById('rtab-members').classList.toggle('active', tab==='members');
+  document.getElementById('rtab-music').classList.toggle('active', tab==='music');
+}
+
+function toggleMic() {
+  micOn = !micOn;
+  const btn = document.getElementById('micBtn');
+  btn.className = 'ctrl-btn' + (micOn?' on':'');
+  btn.querySelector('.ci').textContent = micOn ? '🎙' : '🔇';
+  btn.querySelector('span:last-child').textContent = micOn ? 'Mikrofon' : 'Mute';
+  send({ type: 'MIC_STATE', micOn });
+  renderMembers();
+}
+
+function toggleVol() {
+  volOn = !volOn;
+  const btn = document.getElementById('volBtn');
+  btn.className = 'ctrl-btn' + (volOn?' on':'');
+  btn.querySelector('.ci').textContent = volOn ? '🔊' : '🔈';
+}
+
+function copyCode() {
+  if (!currentRoom) return;
+  navigator.clipboard?.writeText(currentRoom.meta.code);
+  toast('Kode ruang disalin 📋','ok');
+}
+
+function leaveRoom() {
+  send({ type: 'LEAVE_ROOM' });
+  currentRoom = null;
+  stopMusicTimer();
+  showScreen('lobbyScreen');
+  send({ type: 'GET_ROOM_LIST' });
+}
+
+function confirmDelete() { openSheet('delOverlay'); }
+function doDeleteRoom() {
+  send({ type: 'DELETE_ROOM' });
+  closeSheet('delOverlay');
+}
+
+// ─── LOBBY ─────────────────────────────────────────────────────────
+function renderLobby() {
+  const list = document.getElementById('roomList');
+  let filtered = allRooms;
+  if (activeTab==='pub') filtered = allRooms.filter(r=>r.type==='public');
+  if (activeTab==='priv') filtered = allRooms.filter(r=>r.type==='private');
+
+  const owned = allRooms.find(r => r.ownerWsId === myWsId);
+  const fab = document.getElementById('fabBtn');
+  const hint = document.getElementById('fabHint');
+  fab.className = 'fab' + (owned?' disabled':'');
+  hint.style.display = owned ? 'block' : 'none';
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="eico">🎙</div><div class="etxt">Belum ada ruang</div><div class="esub">Buat ruang pertama dan ajak teman!</div></div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(r => {
+    const isMine = r.ownerWsId === myWsId;
+    const avs = (r.members||[]).slice(0,4).map(m =>
+      `<div class="av" style="background:${getColor(m.id)}">${m.name[0]}</div>`).join('');
+    return `<div class="room-card${isMine?' mine':''}" onclick="onRoomClick('${r.id}')">
+      <div class="rc-top">
+        <div class="rc-name">${r.name}</div>
+        <div class="rc-badges">
+          <span class="badge ${r.type==='public'?'pub':'priv'}">${r.type==='public'?'PUBLIK':'PRIVAT'}</span>
+          ${isMine?'<span class="badge mine-b">Milikku</span>':''}
+        </div>
+      </div>
+      <div class="rc-bot">
+        <span class="rc-code">${r.code}</span>
+        <div class="rc-members"><div class="avatars">${avs}</div> ${(r.members||[]).length} orang</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function switchTab(el, tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active'); activeTab = tab; renderLobby();
+}
+
+function onRoomClick(id) {
+  const room = allRooms.find(r => r.id === id);
+  if (!room) return;
+  if (room.type === 'private') {
+    pendingJoinRoomId = id;
+    openSheet('pinOverlay');
+    return;
+  }
+  send({ type: 'JOIN_ROOM', roomId: id, name: myName });
+}
+
+function onFabClick() {
+  const owned = allRooms.find(r => r.ownerWsId === myWsId);
+  if (owned) { toast('Kamu sudah punya ruangan aktif!','err'); return; }
+  if (!myName || myName === 'Pengguna') { openSheet('nameOverlay'); return; }
+  openSheet('createOverlay');
+}
+
+function goMyRoom() {
+  const owned = allRooms.find(r => r.ownerWsId === myWsId);
+  if (owned) { send({ type: 'JOIN_ROOM', roomId: owned.id, name: myName }); }
+  else toast('Kamu belum punya ruangan','warn');
+}
+
+// ─── SHEETS ────────────────────────────────────────────────────────
+function openSheet(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeSheet(id) { document.getElementById(id).classList.add('hidden'); }
+function bgClose(e, id) { if (e.target === document.getElementById(id)) closeSheet(id); }
+
+function showNameSheet() {
+  document.getElementById('nameInp').value = myName;
+  openSheet('nameOverlay');
+}
+
+function saveName() {
+  const n = document.getElementById('nameInp').value.trim();
+  if (!n) return;
+  myName = n; localStorage.setItem('vr_name', n);
+  closeSheet('nameOverlay');
+  toast('Nama disimpan ✓','ok');
+  openSheet('createOverlay');
+}
+
+function selType(t) {
+  document.getElementById('tpPub').classList.toggle('sel', t==='public');
+  document.getElementById('tpPriv').classList.toggle('sel', t==='private');
+  document.getElementById('pinField').style.display = t==='private' ? 'block' : 'none';
+}
+
+function doCreateRoom() {
+  const name = document.getElementById('newRoomName').value.trim();
+  if (!name) { toast('Nama ruang tidak boleh kosong','err'); return; }
+  const type = document.getElementById('tpPub').classList.contains('sel') ? 'public' : 'private';
+  let pin = '';
+  if (type === 'private') {
+    pin = document.getElementById('newRoomPin').value;
+    if (String(pin).length < 4) { toast('PIN harus 4 digit','err'); return; }
+  }
+  send({ type: 'CREATE_ROOM', name: myName, roomName: name, type, pin: String(pin) });
+  closeSheet('createOverlay');
+  document.getElementById('newRoomName').value = '';
+}
+
+function submitPin() {
+  const pin = [1,2,3,4].map(i => document.getElementById('p'+i).value).join('');
+  if (!pendingJoinRoomId) return;
+  send({ type: 'JOIN_ROOM', roomId: pendingJoinRoomId, name: myName, pin });
+  closeSheet('pinOverlay');
+  pendingJoinRoomId = null;
+  [1,2,3,4].forEach(i => document.getElementById('p'+i).value = '');
+}
+
+function pNext(el, nextId) { if (el.value.length >= 1 && nextId) document.getElementById(nextId).focus(); }
+function pBack(e, el, prevId) { if (e.key === 'Backspace' && !el.value && prevId) document.getElementById(prevId).focus(); }
+
+// ─── SCREENS ───────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('hidden', s.id !== id));
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────
+connectWS();
+</script>
+</body>
+</html>
+
 <html lang="id">
 <head>
 <meta charset="UTF-8"/>
