@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"/>
+<title>VoiceRoom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700;900&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+<!-- ════════════ LOBBY ════════════ -->
+<div id="pg-lobby" class="page active">
+
+  <!-- Sticky top bar -->
+  <header class="lobby-bar">
+    <div class="lb-logo">
+      <span class="lb-dot"></span>
+      <span class="lb-name">VoiceRoom</span>
+    </div>
+    <div class="lb-right">
+      <div class="name-wrap">
+        <input id="myName" class="name-input" type="text" placeholder="Nama kamu..." maxlength="24" autocomplete="off"/>
+      </div>
+      <button class="btn-make" onclick="Mod.openCreate()">+ Buat Ruang</button>
+    </div>
+  </header>
+
+  <!-- Active room pill (shown when in a room but browsing lobby) -->
+  <div id="activePill" class="active-pill hidden" onclick="Nav.goRoom()">
+    <span class="pill-dot"></span>
+    <span id="pillText">Kamu di ruang: …</span>
+    <span class="pill-arrow">↗</span>
+  </div>
+
+  <!-- Search + filter -->
+  <div class="search-bar">
+    <div class="search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="searchInput" class="search-input" type="text" placeholder="Cari nama atau kode ruang..." autocomplete="off"
+        oninput="Lobby.search(this.value)"/>
+      <button class="search-clear" id="searchClear" onclick="Lobby.clearSearch()" style="display:none">✕</button>
+    </div>
+    <div class="filter-tabs">
+      <button class="ftab active" data-f="all" onclick="Lobby.filter('all',this)">Semua</button>
+      <button class="ftab" data-f="public" onclick="Lobby.filter('public',this)">🌐 Publik</button>
+      <button class="ftab" data-f="private" onclick="Lobby.filter('private',this)">🔒 Privat</button>
+    </div>
+  </div>
+
+  <!-- Room grid -->
+  <div class="rooms-area">
+    <div id="roomsGrid" class="rooms-grid"></div>
+    <div id="noRooms" class="no-rooms hidden">
+      <div class="no-rooms-icon">🎙</div>
+      <div>Belum ada ruang</div>
+      <div class="no-rooms-sub">Buat ruang pertama dan ajak teman!</div>
+    </div>
+  </div>
+
+  <!-- Join by code -->
+  <div class="join-code-bar">
+    <span class="jcb-label">Punya kode ruang?</span>
+    <input id="directCode" class="jcb-input fira" type="text" placeholder="Ketik kode 6 huruf..." maxlength="6" style="text-transform:uppercase"
+      oninput="this.value=this.value.toUpperCase()"
+      onkeydown="if(event.key==='Enter')Lobby.joinByCode()"/>
+    <button class="btn-join-code" onclick="Lobby.joinByCode()">Masuk →</button>
+  </div>
+</div>
+
+<!-- ════════════ ROOM ════════════ -->
+<div id="pg-room" class="page">
+  <div class="room-layout">
+
+    <!-- LEFT: members -->
+    <aside class="col-members">
+      <div class="room-header">
+        <button class="btn-back" onclick="Nav.goLobby()" title="Kembali ke lobby">‹ Lobby</button>
+        <div class="rh-info">
+          <span id="rh-badge" class="rh-badge">PUBLIK</span>
+          <span id="rh-name" class="rh-name">Ruang</span>
+        </div>
+        <div class="rh-code-row">
+          <span id="rh-code" class="rh-code fira">------</span>
+          <button class="btn-copy" onclick="copyCode()" title="Salin kode">⎘</button>
+        </div>
+      </div>
+      <div class="members-list" id="membersList"></div>
+      <button class="btn-leave-room" onclick="App.leaveRoom()">⏏ Keluar Ruang</button>
+    </aside>
+
+    <!-- CENTER: stage + chat -->
+    <main class="col-center">
+      <div class="stage" id="stage">
+        <div class="stage-noise"></div>
+        <div class="stage-radial"></div>
+        <div id="avatarGrid" class="avatar-grid"></div>
+      </div>
+      <div class="chat-panel">
+        <div class="chat-msgs" id="chatMsgs"></div>
+        <div class="chat-input-row">
+          <input id="chatIn" class="chat-in" type="text" placeholder="Pesan..." maxlength="300" autocomplete="off"
+            onkeydown="if(event.key==='Enter')App.chat()"/>
+          <button class="btn-chat-send" onclick="App.chat()">↑</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- RIGHT: controls -->
+    <aside class="col-controls">
+
+      <!-- Mic card -->
+      <div class="ctrl-card">
+        <div class="ctrl-title">🎙 Mikrofon</div>
+        <button id="btnMute" class="mute-toggle on" onclick="App.toggleMute()">
+          <span id="muteIco">🎙</span> <span id="muteLbl">Aktif</span>
+        </button>
+        <div class="vol-group">
+          <div class="vol-label-row"><span>Gain Mic</span><span id="vMicVal" class="fira">100%</span></div>
+          <input type="range" class="vol-range" id="rMic" min="0" max="200" value="100" oninput="App.setMicGain(+this.value)"/>
+        </div>
+      </div>
+
+      <!-- Speaker card -->
+      <div class="ctrl-card">
+        <div class="ctrl-title">🔊 Suara Anggota</div>
+        <div class="vol-group">
+          <div class="vol-label-row"><span>Volume</span><span id="vVoiceVal" class="fira">100%</span></div>
+          <input type="range" class="vol-range" id="rVoice" min="0" max="200" value="100" oninput="App.setVoiceVol(+this.value)"/>
+        </div>
+      </div>
+
+      <!-- Music card -->
+      <div class="ctrl-card music-card">
+        <div class="ctrl-title">
+          🎵 Musik
+          <label class="btn-upload-music" title="Muat file musik">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Muat
+            <input type="file" id="musicFile" accept="audio/*" multiple onchange="Mus.load(this)"/>
+          </label>
+        </div>
+        <div class="music-track" id="musTrack">— Belum ada musik —</div>
+        <div class="music-ctl">
+          <button onclick="Mus.prev()" class="mc">⏮</button>
+          <button onclick="Mus.play()" class="mc mc-play" id="mcPlay">▶</button>
+          <button onclick="Mus.next()" class="mc">⏭</button>
+          <button onclick="Mus.loop()" class="mc" id="mcLoop">↩</button>
+        </div>
+        <div class="music-prog-row">
+          <span class="fira" id="mCur">0:00</span>
+          <input type="range" class="vol-range" id="mSeek" min="0" max="100" value="0" oninput="Mus.seek(+this.value)"/>
+          <span class="fira" id="mDur">0:00</span>
+        </div>
+        <div class="vol-group">
+          <div class="vol-label-row"><span>Vol Musik</span><span id="vMusVal" class="fira">60%</span></div>
+          <input type="range" class="vol-range" id="rMus" min="0" max="100" value="60" oninput="Mus.vol(+this.value)"/>
+        </div>
+        <div class="playlist" id="playlist"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ════════════ MODAL: BUAT RUANG ════════════ -->
+<div class="overlay" id="modCreate" onclick="Mod.close()">
+<div class="modal" onclick="e=>e.stopPropagation()">
+  <div class="modal-head">Buat Ruang Baru <button class="modal-x" onclick="Mod.close()">✕</button></div>
+  <div class="form-group">
+    <label>Nama Ruang</label>
+    <input id="cName" class="form-input" type="text" placeholder="Contoh: Ngobrol Sore..." maxlength="40"/>
+  </div>
+  <div class="form-group">
+    <label>Tipe</label>
+    <div class="type-row">
+      <label class="type-opt" id="toPub">
+        <input type="radio" name="ctype" value="public" checked/>
+        <div class="to-inner"><span class="to-ico">🌐</span><span class="to-nm">Publik</span><span class="to-desc">Tampil di daftar</span></div>
+      </label>
+      <label class="type-opt" id="toPriv">
+        <input type="radio" name="ctype" value="private"/>
+        <div class="to-inner"><span class="to-ico">🔒</span><span class="to-nm">Privat</span><span class="to-desc">PIN 4 digit</span></div>
+      </label>
+    </div>
+  </div>
+  <div class="form-group" id="pinWrap" style="display:none">
+    <label>PIN Ruang (4 digit)</label>
+    <input id="cPin" class="form-input pin-in fira" type="tel" placeholder="0000" maxlength="4" inputmode="numeric"/>
+  </div>
+  <div class="modal-foot">
+    <button class="btn-cancel" onclick="Mod.close()">Batal</button>
+    <button class="btn-ok" onclick="App.createRoom()">Buat Ruang</button>
+  </div>
+</div>
+</div>
+
+<!-- ════════════ MODAL: PIN ════════════ -->
+<div class="overlay" id="modPin" onclick="Mod.close()">
+<div class="modal modal-sm" onclick="e=>e.stopPropagation()">
+  <div class="modal-head">Ruang Privat <button class="modal-x" onclick="Mod.close()">✕</button></div>
+  <div class="pin-room-name" id="pinRoomName"></div>
+  <div class="form-group">
+    <label>Masukkan PIN (4 digit)</label>
+    <input id="pinInput" class="form-input pin-in fira" type="tel" placeholder="0000" maxlength="4" inputmode="numeric"
+      onkeydown="if(event.key==='Enter')App.verifyPin()"/>
+  </div>
+  <div class="modal-foot">
+    <button class="btn-cancel" onclick="Mod.close()">Batal</button>
+    <button class="btn-ok" onclick="App.verifyPin()">Masuk</button>
+  </div>
+</div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
